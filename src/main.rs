@@ -2,11 +2,17 @@
 extern crate lazy_static;
 
 use std::collections::HashMap;
-mod template;
-use template::{ Package };
+use std::fmt;
+use std::error::{ Error };
+mod templating;
+use templating::{ Package };
+
+type LaTeXEnvironmentName = &'static str;
+type LaTeXCommand = &'static str;
+type LaTeXPackageName = &'static str;
 
 lazy_static! {
-    static ref LATEX_ENVIRONMENTS: HashMap<&'static str, &'static str> = {
+    static ref LATEX_BEGIN_COMMANDS: HashMap<LaTeXEnvironmentName, LaTeXPackageName> = {
         let mut map = HashMap::with_capacity(7);
         map.insert("eqnarray", "eqnarray");
         map.insert("tikzcd", "tikz-cd");
@@ -18,7 +24,7 @@ lazy_static! {
         return map
     };
 
-    static ref LATEX_COMMANDS: HashMap<&'static str, &'static str> = {
+    static ref LATEX_COMMANDS: HashMap<LaTeXCommand, LaTeXPackageName> = {
         let mut map = HashMap::with_capacity(4);
         map.insert("\\addplot", "pgfplots");
         map.insert("\\smartdiagram", "smartdiagram");
@@ -27,7 +33,7 @@ lazy_static! {
         return map
     };
 
-    static ref LATEX_COMMANDS_INLINE: HashMap<&'static str, &'static str> = {
+    static ref LATEX_COMMANDS_INLINE: HashMap<LaTeXCommand, LaTeXPackageName> = {
         let mut map = HashMap::with_capacity(7);
         map.insert("\\color", "xcolor");
         map.insert("\\textcolor", "xcolor");
@@ -36,66 +42,87 @@ lazy_static! {
         return map
     };
 }
+const LATEX_INLINE_COMMAND: &'static str = "\\inline";
 
 #[derive(Debug)]
-pub struct Formula {
-    text: String,
-    has_baseline: bool,
+pub enum SanitizeError {
+    ForbiddenSyntax
 }
 
-impl From<&str> for Formula {
-    fn from (formula: &str) -> Formula {
+impl fmt::Display for SanitizeError {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            SanitizeError::ForbiddenSyntax => write!(formatter, "Notation contains unsupported LaTeX syntax")
+        }
+    }
+}
+
+impl Error for SanitizeError {
+    fn description (&self) -> &str {
+        match *self {
+            SanitizeError::ForbiddenSyntax => "Notation contains unsupported LaTeX syntax",
+        }
+    }
+    fn cause (&self) -> Option<&dyn Error> {
+        match *self {
+            SanitizeError::ForbiddenSyntax => None
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct FormulaTemplate {
+    text: String,
+    has_baseline: bool,
+    is_math_mode: bool,
+}
+
+impl From<&str> for FormulaTemplate {
+    fn from (formula: &str) -> FormulaTemplate {
         let mut formula_str = String::from(formula);
         let mut is_math_mode: bool = true;
         let mut extra_packages: HashMap<&str, Package> = HashMap::new();
 
-        // Check if there are used certain environments and include corresponding packages
-        for (command, env) in LATEX_ENVIRONMENTS.iter() {
-            let command_str = format!("\\begin{{{}}}", command);
-            let command_asterik_str = format!("\\begin{{{}*}}", command);
-
-            if formula_str.contains(&command_str) || formula_str.contains(&command_asterik_str) {
-                is_math_mode = false;
+        let should_update_packages_for_command = |command: &str, env: &str, options: Vec<&str>| {
+            let command_is_found = formula_str.contains(command);
+            if command_is_found {
                 extra_packages.insert(env, Package {
-                    options: vec![],
-                    package_str: env.to_string()
+                    options: options,
+                    package_str: env.to_string(),
                 });
-            }
+            };
+            command_is_found
+        };
+
+        // Check if there are used certain environments and include corresponding packages
+        for (command, env) in LATEX_BEGIN_COMMANDS.iter() {
+            if should_update_packages_for_command(&format!("\\begin{{{}}}", command), env, vec![])
+            || should_update_packages_for_command(&format!("\\begin{{{}*}}", command), env, vec![]) {
+                is_math_mode = false;
+            };
         };
 
         // Check if there are used certain commands and include corresponding packages
         for (command, env) in LATEX_COMMANDS.iter() {
-            if formula_str.contains(command) {
+            if should_update_packages_for_command(command, env, vec![]) {
                 is_math_mode = false;
-                extra_packages.insert(env, Package {
-                    options: vec![],
-                    package_str: env.to_string()
-                });
-            }
+            };
         };
 
         // Same as above but for inline commands inside math mode
         for (command, env) in LATEX_COMMANDS_INLINE.iter() {
-            if formula_str.contains(command) {
+            if should_update_packages_for_command(command, env, vec![]) {
                 is_math_mode = false;
-                extra_packages.insert(env, Package {
-                    options: vec![],
-                    package_str: env.to_string()
-                });
-            }
+            };
         };
 
         // Custom rules
-        if formula_str.contains("\\xymatrix") || formula_str.contains("\\begin{xy}") {
-            extra_packages.insert("xy", Package {
-                options: vec!["all"],
-                package_str: "xy".to_string(),
-            });
-        };
+        should_update_packages_for_command("\\xymatrix", "xy", vec!["all"]);
+        should_update_packages_for_command("\\begin{xy}", "xy", vec!["all"]);
 
         // Other setup
         let is_inline: bool = {
-            let inline_matches: Vec<(usize, &str)> = formula.match_indices("\\inline").collect();
+            let inline_matches: Vec<(usize, &str)> = formula.match_indices(LATEX_INLINE_COMMAND).collect();
             
             if inline_matches.len() == 0 {
                 false
@@ -107,9 +134,10 @@ impl From<&str> for Formula {
 
         if is_inline {
             // Replace "\inline" with "\textstyle "
-            formula_str = format!("\\textstyle {}", &formula_str[7..]);
+            formula_str = format!("\\textstyle {}", &formula_str[LATEX_INLINE_COMMAND.len()..]);
         };
 
+        // let formula_template_name = if is_math_mode { "displayformula" } else { "common" };
 		// $tpl = $isMathMode ? 'displayformula' : 'common';
 
 		// ob_start();
@@ -125,7 +153,6 @@ impl From<&str> for Formula {
 }
 
 fn main() {
-    let mut st = "\\inline|lol look at this \\begin{xy} shit dude".to_string();
-    st = format!("\\textstyle {}", &st[7..]);
+    let st = LATEX_BEGIN_COMMANDS.get("tikzcd").unwrap();
     println!("{}", st);
 }

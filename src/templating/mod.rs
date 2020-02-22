@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub struct Package<'a> {
     options: Vec<&'a str>,
     package_str: String,
