@@ -11,48 +11,12 @@ use std::collections::HashMap;
 use std::fmt;
 use std::error::{ Error };
 use std::fs::{ read_to_string };
+
 mod templating;
 use templating::{ Package };
 
-type LaTeXEnvironmentName = &'static str;
-type LaTeXCommand = &'static str;
-type LaTeXPackageName = &'static str;
-
-lazy_static! {
-    static ref LATEX_BEGIN_COMMANDS: HashMap<LaTeXEnvironmentName, LaTeXPackageName> = {
-        let mut map = HashMap::with_capacity(7);
-        map.insert("eqnarray", "eqnarray");
-        map.insert("tikzcd", "tikz-cd");
-        map.insert("tikzpicture", "tikz");
-        map.insert("circuitikz", "circuitikz");
-        map.insert("sequencediagram", "pgf-umlsd");
-        map.insert("prooftree", "bussproofs");
-        map.insert("align", "");
-        return map
-    };
-
-    static ref LATEX_COMMANDS: HashMap<LaTeXCommand, LaTeXPackageName> = {
-        let mut map = HashMap::with_capacity(4);
-        map.insert("\\addplot", "pgfplots");
-        map.insert("\\smartdiagram", "smartdiagram");
-        map.insert("\\DisplayProof", "bussproofs");
-        map.insert("\\tdplotsetmaincoords", "tikz-3dplot");
-        return map
-    };
-
-    static ref LATEX_COMMANDS_INLINE: HashMap<LaTeXCommand, LaTeXPackageName> = {
-        let mut map = HashMap::with_capacity(7);
-        map.insert("\\color", "xcolor");
-        map.insert("\\textcolor", "xcolor");
-        map.insert("\\colorbox", "xcolor");
-        map.insert("\\pagecolor", "xcolor");
-        return map
-    };
-}
-const LATEX_INLINE_COMMAND: &'static str = "\\inline";
-const DISPLAY_FORMULA_TPL_PATH: &'static str = "./tpl/display_formula.hbs";
-const COMMON_FORMULA_TPL_PATH: &'static str = "./tpl/common.hbs";
-const DOCUMENT_TPL_PATH: &'static str = "./tpl/document.hbs";
+mod constants;
+use constants::*;
 
 #[derive(Debug)]
 pub enum SanitizeError {
@@ -186,6 +150,9 @@ impl From<&str> for FormulaTemplate {
         template
     }
 }
+
+// TODO: document template tests with dummy data
+// TODO: snapshot documetn tests with real formulas
 
 #[test]
 fn inline_formula_test () {
