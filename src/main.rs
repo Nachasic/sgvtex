@@ -1,9 +1,16 @@
 #[macro_use]
 extern crate lazy_static;
+extern crate handlebars;
+extern crate serde;
+#[macro_use]
+extern crate serde_json;
+
+use handlebars::{ Handlebars };
 
 use std::collections::HashMap;
 use std::fmt;
 use std::error::{ Error };
+use std::fs::{ read_to_string };
 mod templating;
 use templating::{ Package };
 
@@ -43,6 +50,9 @@ lazy_static! {
     };
 }
 const LATEX_INLINE_COMMAND: &'static str = "\\inline";
+const DISPLAY_FORMULA_TPL_PATH: &'static str = "./tpl/display_formula.hbs";
+const COMMON_FORMULA_TPL_PATH: &'static str = "./tpl/common.hbs";
+const DOCUMENT_TPL_PATH: &'static str = "./tpl/document.hbs";
 
 #[derive(Debug)]
 pub enum SanitizeError {
@@ -75,15 +85,35 @@ pub struct FormulaTemplate {
     text: String,
     has_baseline: bool,
     is_math_mode: bool,
+    packages: Vec<String>
+}
+
+impl FormulaTemplate {
+    fn apply_base_template (&mut self) {
+        let source_template = match self.is_math_mode {
+            true => read_to_string(&DISPLAY_FORMULA_TPL_PATH).unwrap(),
+            false => read_to_string(&COMMON_FORMULA_TPL_PATH).unwrap()
+        };
+        let handlebars = Handlebars::new();
+
+        self.text = handlebars.render_template(&source_template, &json!({ "formula": self.text })).unwrap();
+    }
+
+    fn apply_document_template (&mut self) {
+        let source_template = read_to_string(&DOCUMENT_TPL_PATH).unwrap();
+        let handlebars = Handlebars::new();
+
+        self.text = handlebars.render_template(&source_template, &json!({ "formula": self.text, "extra_package_codes": self.packages })).unwrap();
+    }
 }
 
 impl From<&str> for FormulaTemplate {
-    fn from (formula: &str) -> FormulaTemplate {
+    fn from<'a> (formula: &str) -> FormulaTemplate {
         let mut formula_str = String::from(formula);
         let mut is_math_mode: bool = true;
         let mut extra_packages: HashMap<&str, Package> = HashMap::new();
 
-        let should_update_packages_for_command = |command: &str, env: &str, options: Vec<&str>| {
+        let mut should_update_packages_for_command = |command: &str, env: &'a str, options: Vec<&'a str>| {
             let command_is_found = formula_str.contains(command);
             if command_is_found {
                 extra_packages.insert(env, Package {
@@ -137,19 +167,52 @@ impl From<&str> for FormulaTemplate {
             formula_str = format!("\\textstyle {}", &formula_str[LATEX_INLINE_COMMAND.len()..]);
         };
 
-        // let formula_template_name = if is_math_mode { "displayformula" } else { "common" };
-		// $tpl = $isMathMode ? 'displayformula' : 'common';
+        let mut template = FormulaTemplate {
+            has_baseline: false,
+            is_math_mode: is_math_mode,
+            text: formula_str,
+            packages: {
+                let mut vec: Vec<String> = vec![];
+                for (_, package) in extra_packages.iter() {
+                    let package_insert_str = package.get_code();
+                    vec.push(package_insert_str)
+                };
+                vec
+            }
+        };
 
-		// ob_start();
-		// include $this->dir . $tpl . '.php';
-		// $documentContent = ob_get_clean();
-
-		// ob_start();
-		// include $this->dir . 'document.php';
-		// $text = ob_get_clean();
-
-		// return new Formula($text, $isMathMode);
+        template.apply_base_template();
+        template.apply_document_template();
+        template
     }
+}
+
+#[test]
+fn inline_formula_test () {
+    let mut template = FormulaTemplate {
+        text: read_to_string(&"./fixtures/inline_formula.tex").unwrap(),
+        is_math_mode: false,
+        has_baseline: false,
+        packages: vec![],
+    };
+    let expected_result = read_to_string(&"./fixtures/expected/common.tex").unwrap();
+
+    template.apply_base_template();
+    assert_eq!(template.text, expected_result);
+}
+
+#[test]
+fn block_formula_test () {
+    let mut template = FormulaTemplate {
+        text: read_to_string(&"./fixtures/block_formula.tex").unwrap(),
+        is_math_mode: true,
+        has_baseline: false,
+        packages: vec![],
+    };
+    let expected_result = read_to_string(&"./fixtures/expected/display_formula.tex").unwrap();
+
+    template.apply_base_template();
+    assert_eq!(template.text, expected_result);
 }
 
 fn main() {

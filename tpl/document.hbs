@@ -1,3 +1,4 @@
+{{{raw}}}
 \documentclass[11pt]{article}
 \usepackage[paperwidth=180in,paperheight=180in]{geometry}
 \batchmode
@@ -16,8 +17,6 @@
 \newunicodechar{φ}{\ensuremath{\varphi}}
 \newunicodechar{ψ}{\ensuremath{\psi}}
 \newunicodechar{ϕ}{\ensuremath{\varphi}}
-
-{{{raw}}}
 \newunicodechar{ᵢ}{\ensuremath{{}_{i}}}
 \newunicodechar{₀}{\ensuremath{{}_{0}}}
 \newunicodechar{₁}{\ensuremath{{}_{1}}}
@@ -31,8 +30,6 @@
 \newunicodechar{₉}{\ensuremath{{}_{9}}}
 \newunicodechar{ₙ}{\ensuremath{{}_{n}}}
 \newunicodechar{ⱼ}{\ensuremath{{}_{j}}}
-{{{/raw}}}
-
 \newunicodechar{ℓ}{\ensuremath{\ell}}
 \newunicodechar{→}{\ensuremath{\rightarrow}}
 \newunicodechar{⇒}{\ensuremath{\supset}}
@@ -57,8 +54,9 @@
 \newunicodechar{⬓}{\ensuremath{\square}}
 \newunicodechar{Σ}{\ensuremath{\sum}}
 \newunicodechar{Π}{\ensuremath{\prod}}
+{{{/raw}}}
 {{#each extra_package_codes}}
-    {{this}}
+    {{{this}}}
 {{/each}}
 
 \pagestyle{empty}
@@ -69,5 +67,5 @@
 \setlength{\belowdisplayskip}{0pt}
 
 \begin{document}
-{{document_content}}
+{{{document_content}}}
 \end{document}

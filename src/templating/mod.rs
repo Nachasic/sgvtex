@@ -1,7 +1,7 @@
 #[derive(Debug)]
 pub struct Package<'a> {
-    options: Vec<&'a str>,
-    package_str: String,
+    pub options: Vec<&'a str>,
+    pub package_str: String,
 }
 
 impl <'a> Package<'a> {
