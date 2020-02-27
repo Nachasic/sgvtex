@@ -1,4 +1,3 @@
-{{{raw}}}
 \documentclass[11pt]{article}
 \usepackage[paperwidth=180in,paperheight=180in]{geometry}
 \batchmode
@@ -54,10 +53,8 @@
 \newunicodechar{⬓}{\ensuremath{\square}}
 \newunicodechar{Σ}{\ensuremath{\sum}}
 \newunicodechar{Π}{\ensuremath{\prod}}
-{{{/raw}}}
-{{#each extra_package_codes}}
-    {{{this}}}
-{{/each}}
+
+~PACKAGE_CODES~
 
 \pagestyle{empty}
 
@@ -67,5 +64,5 @@
 \setlength{\belowdisplayskip}{0pt}
 
 \begin{document}
-{{{document_content}}}
+~DOCUMENT_CONTENT~
 \end{document}

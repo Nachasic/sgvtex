@@ -1,16 +1,12 @@
 #[macro_use]
 extern crate lazy_static;
-extern crate handlebars;
-extern crate serde;
-#[macro_use]
-extern crate serde_json;
-
-use handlebars::{ Handlebars };
+extern crate regex;
 
 use std::collections::HashMap;
 use std::fmt;
 use std::error::{ Error };
 use std::fs::{ read_to_string };
+use regex::Regex;
 
 mod templating;
 use templating::{ Package };
@@ -55,19 +51,24 @@ pub struct FormulaTemplate {
 impl FormulaTemplate {
     fn apply_base_template (&mut self) {
         let source_template = match self.is_math_mode {
-            true => read_to_string(&DISPLAY_FORMULA_TPL_PATH).unwrap(),
-            false => read_to_string(&COMMON_FORMULA_TPL_PATH).unwrap()
+            true => read_to_string(&TPL_DISPLAY_FORMULA_PATH).unwrap(),
+            false => read_to_string(&TPL_COMMON_FORMULA_PATH).unwrap()
         };
-        let handlebars = Handlebars::new();
+        let expression = Regex::new(TPL_TOKEN_FORMULA).unwrap();
+        let formula = &self.text[..];
 
-        self.text = handlebars.render_template(&source_template, &json!({ "formula": self.text })).unwrap();
+        self.text = expression.replace_all(source_template.as_ref(), formula).to_string();
     }
 
     fn apply_document_template (&mut self) {
-        let source_template = read_to_string(&DOCUMENT_TPL_PATH).unwrap();
-        let handlebars = Handlebars::new();
+        let mut source_template = read_to_string(&TPL_DOCUMENT_PATH).unwrap();
+        let content_expression = Regex::new(TPL_TOKEN_DOCUMENT_CONTENT).unwrap();
+        let packages_expression = Regex::new(TPL_TOKEN_DOCUMENT_PACKAGE_CODES).unwrap();
+        let document_content = &self.text[..];
+        let packages_str = &self.packages.join("\n")[..];
 
-        self.text = handlebars.render_template(&source_template, &json!({ "formula": self.text, "extra_package_codes": self.packages })).unwrap();
+        source_template = packages_expression.replace_all(source_template.as_ref(), packages_str).to_string();
+        self.text = content_expression.replace_all(source_template.as_ref(), document_content).to_string();
     }
 }
 

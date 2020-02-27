@@ -36,6 +36,9 @@ lazy_static! {
     };
 }
 pub const LATEX_INLINE_COMMAND: &'static str = "\\inline";
-pub const DISPLAY_FORMULA_TPL_PATH: &'static str = "./tpl/display_formula.hbs";
-pub const COMMON_FORMULA_TPL_PATH: &'static str = "./tpl/common.hbs";
-pub const DOCUMENT_TPL_PATH: &'static str = "./tpl/document.hbs";
+pub const TPL_DISPLAY_FORMULA_PATH: &'static str = "./tpl/display_formula.tex";
+pub const TPL_COMMON_FORMULA_PATH: &'static str = "./tpl/common.tex";
+pub const TPL_DOCUMENT_PATH: &'static str = "./tpl/document.tex";
+pub const TPL_TOKEN_FORMULA: &'static str = r"~FORMULA~";
+pub const TPL_TOKEN_DOCUMENT_CONTENT: &'static str = r"~DOCUMENT_CONTENT~";
+pub const TPL_TOKEN_DOCUMENT_PACKAGE_CODES: &'static str = r"~PACKAGE_CODES~";
