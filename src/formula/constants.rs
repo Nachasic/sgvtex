@@ -36,12 +36,7 @@ lazy_static! {
     };
 }
 pub const LATEX_INLINE_COMMAND: &'static str = "\\inline";
-// pub const TPL_DISPLAY_FORMULA_PATH: &'static str = "./tpl/display_formula.tex";
-// pub const TPL_COMMON_FORMULA_PATH: &'static str = "./tpl/common.tex";
-// pub const TPL_DOCUMENT_PATH: &'static str = "./tpl/document.tex";
-// pub const TPL_TOKEN_FORMULA: &'static str = r"~FORMULA~";
-// pub const TPL_TOKEN_DOCUMENT_CONTENT: &'static str = r"~DOCUMENT_CONTENT~";
-// pub const TPL_TOKEN_DOCUMENT_PACKAGE_CODES: &'static str = r"~PACKAGE_CODES~";
+
 // Main LaTeX document - final output template
 pub const TPL_DOCUMENT_BEGIN: &'static str = "./tpl/document/begin.tex";
 pub const TPL_DOCUMENT_BODY: &'static str = "./tpl/document/body.tex";
