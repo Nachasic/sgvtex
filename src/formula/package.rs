@@ -24,7 +24,7 @@ fn basic_test () {
         options: vec!["foo", "bar"]
     };
     assert_eq!(&pack.get_code(),
-        "\\usepackage[foo,bar]{Test package string}"
+        r#"\usepackage[foo,bar]{Test package string}"#
     );
 }
 
