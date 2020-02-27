@@ -1,12 +1,10 @@
 #[macro_use]
 extern crate lazy_static;
-extern crate regex;
 
 use std::collections::HashMap;
 use std::fmt;
 use std::error::{ Error };
 use std::fs::{ read_to_string };
-use regex::Regex;
 
 mod templating;
 use templating::{ Package };
@@ -49,26 +47,33 @@ pub struct FormulaTemplate {
 }
 
 impl FormulaTemplate {
-    fn apply_base_template (&mut self) {
-        let source_template = match self.is_math_mode {
-            true => read_to_string(&TPL_DISPLAY_FORMULA_PATH).unwrap(),
-            false => read_to_string(&TPL_COMMON_FORMULA_PATH).unwrap()
-        };
-        let expression = Regex::new(TPL_TOKEN_FORMULA).unwrap();
-        let formula = &self.text[..];
-
-        self.text = expression.replace_all(source_template.as_ref(), formula).to_string();
-    }
-
-    fn apply_document_template (&mut self) {
-        let mut source_template = read_to_string(&TPL_DOCUMENT_PATH).unwrap();
-        let content_expression = Regex::new(TPL_TOKEN_DOCUMENT_CONTENT).unwrap();
-        let packages_expression = Regex::new(TPL_TOKEN_DOCUMENT_PACKAGE_CODES).unwrap();
-        let document_content = &self.text[..];
+    fn constuct_document (&mut self) {
+        let document_begin = &read_to_string(&TPL_DOCUMENT_BEGIN).unwrap()[..];
+        let document_body = &read_to_string(&TPL_DOCUMENT_BODY).unwrap()[..];
+        let document_end = &read_to_string(&TPL_DOCUMENT_END).unwrap()[..];
         let packages_str = &self.packages.join("\n")[..];
+        let formula_str = &self.text[..];
 
-        source_template = packages_expression.replace_all(source_template.as_ref(), packages_str).to_string();
-        self.text = content_expression.replace_all(source_template.as_ref(), document_content).to_string();
+        let (formula_begin, formula_end) = match self.is_math_mode {
+            true => (
+                read_to_string(&TPL_DISPLAY_FORMULA_BEGIN).unwrap(),
+                read_to_string(&TPL_DISPLAY_FORMULA_END).unwrap()
+            ),
+            false => (
+                read_to_string(&TPL_COMMON_FORMULA_BEGIN).unwrap(),
+                read_to_string(&TPL_COMMON_FORMULA_END).unwrap()
+            )
+        };
+
+        self.text = [
+            document_begin,
+                packages_str,
+                document_body,
+                &formula_begin[..],
+                    formula_str,
+                &formula_end[..],
+            document_end
+        ].join("\n").to_string();
     }
 }
 
@@ -146,41 +151,29 @@ impl From<&str> for FormulaTemplate {
             }
         };
 
-        template.apply_base_template();
-        template.apply_document_template();
+        template.constuct_document();
         template
     }
 }
 
-// TODO: document template tests with dummy data
-// TODO: snapshot documetn tests with real formulas
-
 #[test]
-fn inline_formula_test () {
-    let mut template = FormulaTemplate {
-        text: read_to_string(&"./fixtures/inline_formula.tex").unwrap(),
-        is_math_mode: false,
-        has_baseline: false,
-        packages: vec![],
-    };
-    let expected_result = read_to_string(&"./fixtures/expected/common.tex").unwrap();
+fn document_formula () {
+    let template = FormulaTemplate::from(
+        &read_to_string(&"./fixtures/inline_formula.tex").unwrap()[..]
+    );
+    let expected = read_to_string(&"./fixtures/expected/document_formula.tex").unwrap();
 
-    template.apply_base_template();
-    assert_eq!(template.text, expected_result);
+    assert_eq!(template.text, expected);
 }
 
 #[test]
-fn block_formula_test () {
-    let mut template = FormulaTemplate {
-        text: read_to_string(&"./fixtures/block_formula.tex").unwrap(),
-        is_math_mode: true,
-        has_baseline: false,
-        packages: vec![],
-    };
-    let expected_result = read_to_string(&"./fixtures/expected/display_formula.tex").unwrap();
+fn document_tikz () {
+    let expected = read_to_string(&"./fixtures/expected/document_tikz.tex").unwrap();
+    let template = FormulaTemplate::from(
+        &read_to_string(&"./fixtures/tikz.tex").unwrap()[..]
+    );
 
-    template.apply_base_template();
-    assert_eq!(template.text, expected_result);
+    assert_eq!(template.text, expected);
 }
 
 fn main() {
